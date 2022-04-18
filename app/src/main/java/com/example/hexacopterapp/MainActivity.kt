@@ -4,11 +4,13 @@ import android.app.Activity
 import android.os.Bundle
 import android.os.SystemClock
 import android.util.Log
+import android.view.SurfaceHolder
 import android.view.View
 import android.view.Window
 import android.view.WindowManager
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import com.example.hexacopterapp.view.HexaSurfaceView
 import com.example.hexacopterapp.view.HexaView
 
 class MainActivity : AppCompatActivity() {
@@ -16,43 +18,54 @@ class MainActivity : AppCompatActivity() {
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN)
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        val HView = findViewById<HexaView>(R.id.hexaView)
-        HView.setWillNotDraw(false)
+        labelUpdate(0f, 0f, 0f)
+        //setContentView(HexaSurfaceView(this))
+        //val HView = findViewById<HexaSurfaceView>(R.id.hexaView)
+        //HView.setWillNotDraw(false)
     }
 
     fun onClickTakeOff(view : View) {
-        val txt = findViewById<TextView>(R.id.textView23)
-        txt.text = "sss"
-        val HView = findViewById<HexaView>(R.id.hexaView)
-        HView.angle_cren = -55f
-        HView.angle_tang = 15f
-        HView.angle_risk = 30f
-        HView.invalidate()
-        Log.d("MyLog", txt.text.toString())
-        Log.d("MyLog", HView.angle_cren.toString())
+        val HView = findViewById<HexaSurfaceView>(R.id.hexaView)
+        smoothAnimation(-55f, 15f, 30f)
     }
 
     fun onClickLanding(view : View) {
-        val txt = findViewById<TextView>(R.id.textView23)
-        txt.text = "aaa"
-        val HView = findViewById<HexaView>(R.id.hexaView)
-        HView.angle_cren = -25f
-        HView.angle_tang = -15f
-        HView.angle_risk = -125f
-        HView.invalidate()
+        val HView = findViewById<HexaSurfaceView>(R.id.hexaView)
+        smoothAnimation(-5f, 10f, 70f)
+    }
+
+    fun smoothAnimation(new_cren : Float, new_tang : Float, new_risk : Float) {
+        val HView = findViewById<HexaSurfaceView>(R.id.hexaView)
+        HView.angle_cren_old = HView.angle_cren
+        HView.angle_tang_old = HView.angle_tang
+        HView.angle_risk_old = HView.angle_risk
+        var cren_k : Float = (new_cren - HView.angle_cren_old) / 10f
+        var tang_k : Float = (new_tang - HView.angle_tang_old) / 10f
+        var risk_k : Float = (new_risk - HView.angle_risk_old) / 10f
         Log.d("MyLog", HView.angle_cren.toString())
+        Log.d("MyLog", HView.angle_cren_old.toString())
+        Log.d("MyLog", cren_k.toString())
+        for (i in 1..10) {
+            Log.d("MyLog", HView.angle_cren.toString())
+            HView.angle_cren = HView.angle_cren + cren_k
+            HView.angle_tang = HView.angle_tang + tang_k
+            HView.angle_risk = HView.angle_risk + risk_k
+            labelUpdate(HView.angle_cren, HView.angle_tang, HView.angle_risk)
+            SystemClock.sleep(25)
+        }
+    }
+
+    fun labelUpdate(new_cren : Float, new_tang : Float, new_risk : Float) {
+        val cren = findViewById<TextView>(R.id.cren)
+        val tang = findViewById<TextView>(R.id.tang)
+        val risk = findViewById<TextView>(R.id.risk)
+        cren.text = "Крен: " + new_cren.toString()
+        tang.text = "Тангаж: " + new_tang.toString()
+        risk.text = "Угол рысканья: " + new_risk.toString()
     }
 
     override fun onResume() {
-        val i = 1
-        val HView = findViewById<HexaView>(R.id.hexaView)
         super.onResume()
-        //while (true) {
-            //for (i in 0..30) {
-                //SystemClock.sleep(1000)
-                //HView.angle_cren = i.toFloat()
-            //}
-        //}
     }
 
 

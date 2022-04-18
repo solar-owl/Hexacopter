@@ -10,13 +10,16 @@ import android.view.View
 import androidx.annotation.Nullable
 
 
-class HexaView : SurfaceView {
+class HexaView : View {
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val paint_text = Paint(Paint.ANTI_ALIAS_FLAG)
     var angle_cren: Float = 15f
     var angle_tang: Float = 10f
     var angle_risk: Float = 225f
-    val a = 1
+
+    var angle_cren_old: Float = 15f
+    var angle_tang_old: Float = 10f
+    var angle_risk_old: Float = 225f
 
     constructor(context: Context?) : super(context) {}
     constructor(context: Context?, @Nullable attrs: AttributeSet?) : super(context, attrs) {}
