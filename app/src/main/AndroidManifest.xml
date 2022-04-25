@@ -15,7 +15,9 @@
         android:theme="@style/Theme.HexacopterApp">
         <activity
             android:name=".Connection"
-            android:exported="true">
+            android:exported="true"
+            android:launchMode="singleTop"
+            >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -25,8 +27,9 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:screenOrientation="landscape">
-
+            android:screenOrientation="landscape"
+            android:launchMode="singleTop"
+            >
         </activity>
     </application>
 

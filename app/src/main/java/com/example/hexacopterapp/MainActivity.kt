@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
 import android.os.NetworkOnMainThreadException
+import android.os.StrictMode
 import android.os.SystemClock
 import android.text.format.DateFormat
 import android.util.Log
@@ -14,22 +15,24 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.example.hexacopterapp.view.HexaSurfaceView
+import com.example.hexacopterapp.view.HexaView
 import com.google.gson.Gson
-import net.schmizz.sshj.SSHClient
-import net.schmizz.sshj.common.IOUtils
-import net.schmizz.sshj.connection.channel.direct.Session
-import java.io.BufferedReader
-import java.io.InputStreamReader
-import java.io.PrintWriter
-import java.lang.Error
-import java.net.Socket
+import com.jcraft.jsch.ChannelExec
+import com.jcraft.jsch.JSch
+import com.jcraft.jsch.Session
+import java.io.ByteArrayOutputStream
+import java.lang.Math.toDegrees
+import java.util.*
 import kotlin.concurrent.fixedRateTimer
+import androidx.gridlayout.widget.GridLayout
+
+
 
 class MainActivity : AppCompatActivity() {
 
 
     private var session: Session ? = null
-    private val sshConnection : Session ? = null
+    private val channel: ChannelExec ? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         val dateFormat = DateFormat.getDateFormat(
@@ -38,35 +41,42 @@ class MainActivity : AppCompatActivity() {
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN)
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        labelUpdate(0f, 0f, 0f)
-        setContentView(HexaSurfaceView(this))
+
+        labelUpdate(0.0, 0.0, 0.0)
+        //setContentView(HexaSurfaceView(this))
         val HView = findViewById<HexaSurfaceView>(R.id.hexaView)
         HView.setWillNotDraw(false)
 
-        try{
-            val sshConnection = SSHClient()
-//            sshConnection.connect("172.20.10.3:22")
-//            sshConnection.authPassword("kopter", "kopter")
-            sshConnection.connect("192.168.0.105")
-            sshConnection.authPassword("tim", "02181820")
-            session = sshConnection.startSession()
-            Thread.sleep(1000)
-            fixedRateTimer("timer", false, 0, 50){
-                this@MainActivity.GetNewData{
-                    if (session != null){
-                        var sess = session
-                        val cmd = sess?.exec("spc flight.json")
-                        val tempNum = IOUtils.readFully(cmd?.getInputStream()).toString()
-                        var gson = Gson()
-                        var data = gson?.fromJson("flight.json", Metrics.Data::class.java)
-                        smoothAnimation(data.roll, data.pitch,data.yaw)
-                        labelUpdate(data.roll, data.pitch,data.yaw)
-                    }
-                }
-            }
-        }
-        catch ( e: NetworkOnMainThreadException){
-            val text = "Пора покормить кота!"
+        val policy = StrictMode.ThreadPolicy.Builder().permitAll().build()
+        StrictMode.setThreadPolicy(policy)
+        val jsch = JSch()
+
+
+        try {
+            //sshConnection.connect("172.20.10.3")
+//          //sshConnection.authPassword("kopter", "kopter")
+            session = jsch.getSession("tim", "192.168.0.105", 22)
+            session?.setPassword("02181820")
+
+            // Avoid asking for key confirmation
+            val prop = Properties()
+            prop.put("StrictHostKeyChecking", "no")
+            session?.setConfig(prop)
+            session?.connect()
+
+//            // SSH Channel
+//            val channel = session?.openChannel("exec") as ChannelExec
+//            val stream = ByteArrayOutputStream()
+//            channel.outputStream = stream
+
+            //channel.setCommand("ls -la");
+            //channel.connect(1000);
+            java.lang.Thread.sleep(500);   // this kludge seemed to be required.
+            //channel.disconnect();
+
+            //val result = stream.toString();
+        } catch (e: NetworkOnMainThreadException) {
+            val text = "Нет соединения с гексакоптером!"
             val duration = Toast.LENGTH_SHORT
 
             val toast = Toast.makeText(applicationContext, text, duration)
@@ -75,19 +85,47 @@ class MainActivity : AppCompatActivity() {
             val intent = Intent(this@MainActivity, Connection::class.java)
             startActivity(intent)
         }
+
     }
 
-    fun GetNewData(function: () -> Unit) {}
+
+
+    override fun onSaveInstanceState(savedInstanceState:Bundle) {
+        super.onSaveInstanceState(savedInstanceState)
+    }
+
 
     fun onClickTakeOff(view : View) {
         if (session != null){
-        //val HView = findViewById<HexaSurfaceView>(R.id.hexaView)
-        val cmd = session?.exec("python TakeOff.py")
-        val tempNum = IOUtils.readFully(cmd?.getInputStream()).toString()
-        //smoothAnimation(-55f, 15f, 30f)
+            // SSH Channel
+            val channel = session?.openChannel("exec") as ChannelExec
+            val stream = ByteArrayOutputStream()
+            channel.outputStream = stream
+            //val HView = findViewById<HexaSurfaceView>(R.id.hexaView)
+            //channel.setCommand("python3 TakeOff.py --connect /dev/serial0")
+            //channel.connect(1000)
+            //java.lang.Thread.sleep(500)   // this kludge seemed to be required.
+            //smoothAnimation(-55f, 15f, 30f)
+            fixedRateTimer("timer", false, 0, 50){
+                //this@MainActivity.GetNewData{
+                    if (session != null){
+                        //channel.setCommand("python3 arm_test.py --connect /dev/serial0")
+                        //channel.connect(10)
+                        //java.lang.Thread.sleep(5)   // this kludge seemed to be required.
+                        channel.setCommand("cat docs/flight.json")
+                        channel.connect(1000)
+                        java.lang.Thread.sleep(500)   // this kludge seemed to be required.
+                        val result = stream.toString()
+                        var gson = Gson()
+                        var data = gson?.fromJson(result, Metrics.Data::class.java)
+                        smoothAnimation(toDegrees(data.roll), toDegrees(data.pitch),toDegrees(data.yaw))
+                        labelUpdate(toDegrees(data.roll), toDegrees(data.pitch),toDegrees(data.yaw))
+                    }
+                //}
+            }
         }
         else{
-            val text = "Пора покормить кота!"
+            val text = "Потеряно соединение!"
             val duration = Toast.LENGTH_SHORT
 
             val toast = Toast.makeText(applicationContext, text, duration)
@@ -102,12 +140,17 @@ class MainActivity : AppCompatActivity() {
     fun onClickLanding(view : View) {
         if (session != null) {
             //val HView = findViewById<HexaSurfaceView>(R.id.hexaView)
-            val cmd = session?.exec("python Landing.py")
-            val tempNum = IOUtils.readFully(cmd?.getInputStream()).toString()
+            // SSH Channel
+            val channel = session?.openChannel("exec") as ChannelExec
+            val stream = ByteArrayOutputStream()
+            channel.outputStream = stream
+            channel.setCommand("python3 Landing.py --connect /dev/serial0");
+            channel.connect(10)
+            java.lang.Thread.sleep(5);   // this kludge seemed to be required.
             //smoothAnimation(-5f, 10f, 70f)
         }
         else{
-            val text = "Пора покормить кота!"
+            val text = "Потеряно соединение!"
             val duration = Toast.LENGTH_SHORT
 
             val toast = Toast.makeText(applicationContext, text, duration)
@@ -119,28 +162,28 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    fun smoothAnimation(new_cren : Float, new_tang : Float, new_risk : Float) {
+    fun smoothAnimation(new_cren: Double, new_tang: Double, new_risk: Double) {
         val HView = findViewById<HexaSurfaceView>(R.id.hexaView)
         HView.angle_cren_old = HView.angle_cren
         HView.angle_tang_old = HView.angle_tang
         HView.angle_risk_old = HView.angle_risk
-        var cren_k : Float = (new_cren - HView.angle_cren_old) / 10f
-        var tang_k : Float = (new_tang - HView.angle_tang_old) / 10f
-        var risk_k : Float = (new_risk - HView.angle_risk_old) / 10f
+        var cren_k : Double = (new_cren - HView.angle_cren_old) / 10f
+        var tang_k : Double = (new_tang - HView.angle_tang_old) / 10f
+        var risk_k : Double = (new_risk - HView.angle_risk_old) / 10f
         Log.d("MyLog", HView.angle_cren.toString())
         Log.d("MyLog", HView.angle_cren_old.toString())
         Log.d("MyLog", cren_k.toString())
         for (i in 1..10) {
             Log.d("MyLog", HView.angle_cren.toString())
-            HView.angle_cren = HView.angle_cren + cren_k
-            HView.angle_tang = HView.angle_tang + tang_k
-            HView.angle_risk = HView.angle_risk + risk_k
-            labelUpdate(HView.angle_cren, HView.angle_tang, HView.angle_risk)
+            HView.angle_cren = HView.angle_cren + cren_k.toFloat()
+            HView.angle_tang = HView.angle_tang + tang_k.toFloat()
+            HView.angle_risk = HView.angle_risk + risk_k.toFloat()
+            labelUpdate(HView.angle_cren.toDouble(), HView.angle_tang.toDouble(), HView.angle_risk.toDouble())
             SystemClock.sleep(25)
         }
     }
 
-    fun labelUpdate(new_cren : Float, new_tang : Float, new_risk : Float) {
+    fun labelUpdate(new_cren: Double, new_tang: Double, new_risk: Double) {
         val cren = findViewById<TextView>(R.id.cren)
         val tang = findViewById<TextView>(R.id.tang)
         val risk = findViewById<TextView>(R.id.risk)
@@ -150,7 +193,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
-        sshConnection?.close()
+        channel?.disconnect()
         super.onDestroy()
 
     }
@@ -161,8 +204,8 @@ class MainActivity : AppCompatActivity() {
 class Metrics {
 
     data class Data(
-        val roll: Float,
-        val pitch: Float,
-        val yaw:  Float
+        val pitch: Double,
+        val yaw:  Double,
+        val roll: Double,
     )
 }
