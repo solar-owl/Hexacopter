@@ -38,10 +38,9 @@ class Connection : AppCompatActivity() {
         val jsch = JSch()
 
 
-        session = jsch.getSession("tim", "192.168.0.105", 22)
-        session?.setPassword("02181820")
-//        session = jsch.getSession("kopter", "172.20.10.3", 22)
-//        session?.setPassword("kopter")
+
+        session = jsch.getSession("kopter", "172.20.10.3", 22)
+        session?.setPassword("kopter")
 
             // Avoid asking for key confirmation
         val prop = Properties()
