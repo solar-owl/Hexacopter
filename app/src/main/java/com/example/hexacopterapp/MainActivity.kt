@@ -1,6 +1,5 @@
 package com.example.hexacopterapp
 
-import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
 import android.os.NetworkOnMainThreadException
@@ -15,7 +14,6 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.example.hexacopterapp.view.HexaSurfaceView
-import com.example.hexacopterapp.view.HexaView
 import com.google.gson.Gson
 import com.jcraft.jsch.ChannelExec
 import com.jcraft.jsch.JSch
@@ -23,9 +21,6 @@ import com.jcraft.jsch.Session
 import java.io.ByteArrayOutputStream
 import java.lang.Math.toDegrees
 import java.util.*
-import kotlin.concurrent.fixedRateTimer
-import androidx.gridlayout.widget.GridLayout
-
 
 
 class MainActivity : AppCompatActivity() {
@@ -33,6 +28,7 @@ class MainActivity : AppCompatActivity() {
 
     private var session: Session ? = null
     private val channel: ChannelExec ? = null
+    private var flag: Boolean = true
 
     override fun onCreate(savedInstanceState: Bundle?) {
         val dateFormat = DateFormat.getDateFormat(
@@ -43,7 +39,7 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         labelUpdate(0.0, 0.0, 0.0)
-        //setContentView(HexaSurfaceView(this))
+
         val HView = findViewById<HexaSurfaceView>(R.id.hexaView)
         HView.setWillNotDraw(false)
 
@@ -53,9 +49,9 @@ class MainActivity : AppCompatActivity() {
 
 
         try {
-            //sshConnection.connect("172.20.10.3")
-//          //sshConnection.authPassword("kopter", "kopter")
-            session = jsch.getSession("kopter", "172.20.10.3", 22)
+
+
+            session = jsch.getSession("kopter", "192.168.0.104", 22)
             session?.setPassword("kopter")
 
             // Avoid asking for key confirmation
@@ -64,17 +60,8 @@ class MainActivity : AppCompatActivity() {
             session?.setConfig(prop)
             session?.connect()
 
-//            // SSH Channel
-//            val channel = session?.openChannel("exec") as ChannelExec
-//            val stream = ByteArrayOutputStream()
-//            channel.outputStream = stream
+            java.lang.Thread.sleep(100);   // this kludge seemed to be required.
 
-            //channel.setCommand("ls -la");
-            //channel.connect(1000);
-            java.lang.Thread.sleep(500);   // this kludge seemed to be required.
-            //channel.disconnect();
-
-            //val result = stream.toString();
         } catch (e: NetworkOnMainThreadException) {
             val text = "Нет соединения с гексакоптером!"
             val duration = Toast.LENGTH_SHORT
@@ -96,35 +83,49 @@ class MainActivity : AppCompatActivity() {
 
 
     fun onClickTakeOff(view : View) {
-        if (session != null){
-            // SSH Channel
+        if (session != null) {
             val channel = session?.openChannel("exec") as ChannelExec
-            val stream = ByteArrayOutputStream()
+            var stream = ByteArrayOutputStream()
             channel.outputStream = stream
-            //val HView = findViewById<HexaSurfaceView>(R.id.hexaView)
-            //channel.setCommand("python3 TakeOff.py --connect /dev/serial0")
-            //channel.connect(1000)
-            //java.lang.Thread.sleep(500)   // this kludge seemed to be required.
-            //smoothAnimation(-55f, 15f, 30f)
-            fixedRateTimer("timer", false, 0, 50){
-                //this@MainActivity.GetNewData{
-                    if (session != null){
-                        //channel.setCommand("python3 arm_test.py --connect /dev/serial0")
-                        //channel.connect(10)
-                        //java.lang.Thread.sleep(5)   // this kludge seemed to be required.
-                        channel.setCommand("cat docs/flight.json")
-                        channel.connect(1000)
-                        java.lang.Thread.sleep(500)   // this kludge seemed to be required.
-                        val result = stream.toString()
-                        var gson = Gson()
-                        var data = gson?.fromJson(result, Metrics.Data::class.java)
-                        smoothAnimation(toDegrees(data.roll), toDegrees(data.pitch),toDegrees(data.yaw))
-                        labelUpdate(toDegrees(data.roll), toDegrees(data.pitch),toDegrees(data.yaw))
+
+            var gson = Gson()
+//            val thread = Thread {
+                while(flag) {
+
+                    //SSH Channel
+                    val channel = session?.openChannel("exec") as ChannelExec
+                    var stream = ByteArrayOutputStream()
+                    channel.outputStream = stream
+
+                    channel.setCommand("cat /home/kopter/test_file.json")
+
+                    channel.connect(270)
+                    java.lang.Thread.sleep(70)
+                    val res = stream.toString()
+
+
+                    try {
+                        var data = gson?.fromJson(res, Metrics.Data::class.java)
+                        smoothAnimation(
+                            toDegrees(data.roll),
+                            toDegrees(data.pitch),
+                            toDegrees(data.yaw)
+                        )
+                        labelUpdate(
+                            toDegrees(data.roll),
+                            toDegrees(data.pitch),
+                            toDegrees(data.yaw)
+                        )
+
+                    } catch (e: NullPointerException) {
+
                     }
-                //}
-            }
-        }
-        else{
+                    java.lang.Thread.sleep(70)
+
+                }
+//            }
+//            thread.start()
+        } else {
             val text = "Потеряно соединение!"
             val duration = Toast.LENGTH_SHORT
 
@@ -137,17 +138,19 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+
     fun onClickLanding(view : View) {
         if (session != null) {
             //val HView = findViewById<HexaSurfaceView>(R.id.hexaView)
             // SSH Channel
-            val channel = session?.openChannel("exec") as ChannelExec
-            val stream = ByteArrayOutputStream()
-            channel.outputStream = stream
-            channel.setCommand("python3 Landing.py --connect /dev/serial0");
-            channel.connect(10)
-            java.lang.Thread.sleep(5);   // this kludge seemed to be required.
+//            val channel = session?.openChannel("exec") as ChannelExec
+//            val stream = ByteArrayOutputStream()
+//            channel.outputStream = stream
+//            channel.setCommand("python3 Landing.py --connect /dev/serial0");
+//            channel.connect(1000)
+//            java.lang.Thread.sleep(100);   // this kludge seemed to be required.
             //smoothAnimation(-5f, 10f, 70f)
+            flag = false
         }
         else{
             val text = "Потеряно соединение!"
@@ -187,9 +190,9 @@ class MainActivity : AppCompatActivity() {
         val cren = findViewById<TextView>(R.id.cren)
         val tang = findViewById<TextView>(R.id.tang)
         val risk = findViewById<TextView>(R.id.risk)
-        cren.text = "Крен: " + new_cren.toString()
-        tang.text = "Тангаж: " + new_tang.toString()
-        risk.text = "Угол рысканья: " + new_risk.toString()
+        cren.text = "Крен: " + new_cren
+        tang.text = "Тангаж: " + new_tang
+        risk.text = "Угол рысканья: " + new_risk
     }
 
     override fun onDestroy() {

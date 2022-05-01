@@ -37,9 +37,7 @@ class Connection : AppCompatActivity() {
         StrictMode.setThreadPolicy(policy)
         val jsch = JSch()
 
-
-
-        session = jsch.getSession("kopter", "172.20.10.3", 22)
+        session = jsch.getSession("kopter", "192.168.0.104", 22)
         session?.setPassword("kopter")
 
             // Avoid asking for key confirmation
@@ -55,35 +53,12 @@ class Connection : AppCompatActivity() {
             val stream = ByteArrayOutputStream()
             channel.outputStream = stream
 
-            channel.setCommand("ls -la");
-            channel.connect(1000);
-            java.lang.Thread.sleep(500)   // this kludge seemed to be required.
+            //channel.setCommand("ls -la");
+            channel.connect(350);
+            java.lang.Thread.sleep(50)   // this kludge seemed to be required.
             channel.disconnect()
 
             val result = stream.toString();
-//        try{
-//            val policy = ThreadPolicy.Builder().permitAll().build()
-//            StrictMode.setThreadPolicy(policy)
-//            val sshConnection = SSHClient()
-//            sshConnection.addHostKeyVerifier(PromiscuousVerifier())
-//            //sshConnection.connect("172.20.10.3")
-//            //sshConnection.authPassword("kopter", "kopter")
-//            //sshConnection.connect(InetAddress.getByName("192.168.0.105"))
-//            //sshConnection.loadKnownHosts()
-//            //sshConnection.connect("localhost")
-//            //sshConnection.connect("192.168.0.105")
-//            //sshConnection.authPassword("tim", "02181820")
-//            val keyProvider: KeyProvider = sshConnection.loadKeys(PRIVATE_KEY.toString(), null, null)
-//            sshConnection.authPublickey("tim", keyProvider)
-//            session = sshConnection.startSession()
-//            val cmd = session?.exec("ls -l")
-//            val tempNum = IOUtils.readFully(cmd?.getInputStream()).toString()
-//            //Thread.sleep(1000)
-            //val duration = Toast.LENGTH_LONG
-            //val toast = Toast.makeText(applicationContext, tempNum, duration)
-            //toast.setGravity(Gravity.CENTER, 0, 0)
-
-            //toast.show()
             val intent = Intent(this@Connection, MainActivity::class.java)
             startActivity(intent)
         }
