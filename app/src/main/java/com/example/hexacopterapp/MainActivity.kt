@@ -21,6 +21,7 @@ import com.jcraft.jsch.Session
 import java.io.ByteArrayOutputStream
 import java.lang.Math.toDegrees
 import java.util.*
+import kotlin.math.roundToInt
 
 
 class MainActivity : AppCompatActivity() {
@@ -29,6 +30,7 @@ class MainActivity : AppCompatActivity() {
     private var session: Session ? = null
     private val channel: ChannelExec ? = null
     private var flag: Boolean = true
+    private var thread: Thread = Thread()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         val dateFormat = DateFormat.getDateFormat(
@@ -89,7 +91,7 @@ class MainActivity : AppCompatActivity() {
             channel.outputStream = stream
 
             var gson = Gson()
-//            val thread = Thread {
+            thread = Thread {
                 while(flag) {
 
                     //SSH Channel
@@ -99,7 +101,7 @@ class MainActivity : AppCompatActivity() {
 
                     channel.setCommand("cat /home/kopter/test_file.json")
 
-                    channel.connect(270)
+                    channel.connect(500)
                     java.lang.Thread.sleep(70)
                     val res = stream.toString()
 
@@ -123,8 +125,8 @@ class MainActivity : AppCompatActivity() {
                     java.lang.Thread.sleep(70)
 
                 }
-//            }
-//            thread.start()
+            }
+            thread.start()
         } else {
             val text = "Потеряно соединение!"
             val duration = Toast.LENGTH_SHORT
@@ -150,6 +152,7 @@ class MainActivity : AppCompatActivity() {
 //            channel.connect(1000)
 //            java.lang.Thread.sleep(100);   // this kludge seemed to be required.
             //smoothAnimation(-5f, 10f, 70f)
+            thread.stop()
             flag = false
         }
         else{
@@ -190,9 +193,12 @@ class MainActivity : AppCompatActivity() {
         val cren = findViewById<TextView>(R.id.cren)
         val tang = findViewById<TextView>(R.id.tang)
         val risk = findViewById<TextView>(R.id.risk)
-        cren.text = "Крен: " + new_cren
-        tang.text = "Тангаж: " + new_tang
-        risk.text = "Угол рысканья: " + new_risk
+        val n_cren = ((new_cren * 1000).roundToInt()).toDouble() / 1000
+        val n_tang = ((new_tang * 1000).roundToInt()).toDouble()/ 1000
+        val n_risk = ((new_risk * 1000).roundToInt()).toDouble()/ 1000
+        cren.text = "Крен: " + n_cren
+        tang.text = "Тангаж: " + n_tang
+        risk.text = "Угол рысканья: " + n_risk
     }
 
     override fun onDestroy() {
